@@ -137,8 +137,13 @@ state = cart_pole.get_state(state_tuple)
 # Initialize all state rewards to zero.
 
 ###### BEGIN YOUR CODE ######
-# TODO:
-raise NotImplementedError('Initializations not implemented')
+values = np.random.uniform(low=0.0, high=0.1, shape=(NUM_STATES))
+transition = np.full(shape=(NUM_STATES, NUM_ACTIONS, NUM_STATES), fill_value=1/NUM_STATES)
+touple_counter = np.zeros(shape=(NUM_STATES, NUM_ACTIONS, NUM_STATES), dtype=int)
+pair_visit = np.zeros(shape=(NUM_STATES, NUM_ACTIONS), dtype=bool)
+rewards = np.zeros(NUM_STATES)
+visitors_counter = np.zeros(NUM_STATES, dtype=int)
+new_rewards = np.zeros(NUM_STATES)
 ###### END YOUR CODE ######
 
 # This is the criterion to end the simulation.
@@ -161,8 +166,8 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
     # TODO:
     # raise NotImplementedError('Action choice not implemented')
     # action = 0 if np.random.uniform() < 0.5 else 1
+    action = np.random.uniform() > 0.5
     ###### END YOUR CODE ######
-
     # Get the next state by simulating the dynamics
     state_tuple = cart_pole.simulate(action, state_tuple)
     # x, x_dot, theta, theta_dot = state_tuple
@@ -191,10 +196,15 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
 
     ###### BEGIN YOUR CODE ######
     # TODO:
-    raise NotImplementedError('Update T and R not implemented')
     # record the number of times `state, action, new_state` occurs
     # record the rewards for every `new_state`
     # record the number of time `new_state` was reached
+
+    touple_counter[state, action, new_state] +=1
+    touple_counter[state, action] = True
+    visitors_counter[new_state] += 1
+    new_rewards[new_state] = R
+
     ###### END YOUR CODE ######
 
     # Recompute MDP model whenever pole falls
@@ -210,7 +220,12 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
 
         ###### BEGIN YOUR CODE ######
         # TODO:
-        raise NotImplementedError('MDP  T and R update not implemented')
+        for state in range(NUM_STATES):
+            for action in range(NUM_ACTIONS):
+                if pair_visit[state, action]:
+                    for next_state in range(NUM_STATES):
+                        transition = 1 / touple_counter[state, action, next_state] if touple_counter[state, action, next_state] else 0
+        rewards[:] = new_rewards
         ###### END YOUR CODE ######
 
         # Perform value iteration using the new estimated model for the MDP.
