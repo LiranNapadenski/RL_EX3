@@ -137,13 +137,16 @@ state = cart_pole.get_state(state_tuple)
 # Initialize all state rewards to zero.
 
 ###### BEGIN YOUR CODE ######
-values = np.random.uniform(low=0.0, high=0.1, shape=(NUM_STATES))
-transition = np.full(shape=(NUM_STATES, NUM_ACTIONS, NUM_STATES), fill_value=1/NUM_STATES)
-touple_counter = np.zeros(shape=(NUM_STATES, NUM_ACTIONS, NUM_STATES), dtype=int)
-pair_visit = np.zeros(shape=(NUM_STATES, NUM_ACTIONS), dtype=bool)
+# TODO:
+policy = np.full(shape=(NUM_STATES), fill_value=-1, dtype=int)
+p = np.full(shape=(NUM_STATES, NUM_ACTIONS, NUM_STATES), fill_value=1/NUM_STATES)
 rewards = np.zeros(NUM_STATES)
-visitors_counter = np.zeros(NUM_STATES, dtype=int)
+value = np.random.uniform(low=0.0, high=0.1, size=NUM_STATES)
+counter ={} #how many times did i see (s, a, ns)
 new_rewards = np.zeros(NUM_STATES)
+time_reached = np.zeros(NUM_STATES) #times visited s
+time_reached[state] = 1 #started at state
+counter_times={} #how many times did i see (s, a)
 ###### END YOUR CODE ######
 
 # This is the criterion to end the simulation.
@@ -166,8 +169,13 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
     # TODO:
     # raise NotImplementedError('Action choice not implemented')
     # action = 0 if np.random.uniform() < 0.5 else 1
-    action = np.random.uniform() > 0.5
+    if policy[state] == -1 or np.random.rand() < 0.05:
+        action = np.random.randint(NUM_ACTIONS)
+    else:
+        action = policy[state]
+
     ###### END YOUR CODE ######
+
     # Get the next state by simulating the dynamics
     state_tuple = cart_pole.simulate(action, state_tuple)
     # x, x_dot, theta, theta_dot = state_tuple
@@ -200,10 +208,12 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
     # record the rewards for every `new_state`
     # record the number of time `new_state` was reached
 
-    touple_counter[state, action, new_state] +=1
-    touple_counter[state, action] = True
-    visitors_counter[new_state] += 1
+    if (state, action) not in counter:
+        counter[(state, action)] = {}
+    counter[(state, action)][new_state] = counter.get((state, action),{}).get(new_state, 0) + 1
+    counter_times[(state, action)] = 1 + counter_times.get((state, action), 0)
     new_rewards[new_state] = R
+    time_reached[new_state] += 1
 
     ###### END YOUR CODE ######
 
@@ -220,14 +230,17 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
 
         ###### BEGIN YOUR CODE ######
         # TODO:
-        for state in range(NUM_STATES):
-            for action in range(NUM_ACTIONS):
-                if pair_visit[state, action]:
-                    for next_state in range(NUM_STATES):
-                        transition = 1 / touple_counter[state, action, next_state] if touple_counter[state, action, next_state] else 0
-        rewards[:] = new_rewards
+        for s in range(NUM_STATES):
+            if time_reached[s] > 0 :
+                for a in range(NUM_ACTIONS):
+                    if (s, a) in counter:
+                        p[s, a, :] = 0
+                        nested_dic = counter[(s, a)]
+                        total = counter_times[(s, a)]
+                        for ns, times in nested_dic.items():
+                            p[s, a, ns] = times / total
+        rewards = np.copy(new_rewards)
         ###### END YOUR CODE ######
-
         # Perform value iteration using the new estimated model for the MDP.
         # The convergence criterion should be based on `TOLERANCE` as described
         # at the top of the file.
@@ -236,7 +249,24 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
 
         ###### BEGIN YOUR CODE ######
         # TODO:
-        raise NotImplementedError('Value iteration choice not implemented')
+        it = 0
+        max_diff = 1 + TOLERANCE
+        while max_diff > TOLERANCE:
+            Vprev = np.copy(value)
+            for s in range(NUM_STATES):
+                action_values = np.zeros(NUM_ACTIONS)
+                for a in range(NUM_ACTIONS):
+                    for ns in range(NUM_STATES):
+                        action_values[a] += p[s, a, ns] * (rewards[ns] + GAMMA * Vprev[ns])
+                value[s] = np.max(action_values)
+                policy[s] = np.argmax(action_values)
+            max_diff = np.abs(value - Vprev).max()
+            it += 1
+        if it == 1 :
+            consecutive_no_learning_trials += 1
+        else:
+            consecutive_no_learning_trials = 0
+        print(f"the time is {time}\n with optimal policy {policy}\n value func {value}")
         ###### END YOUR CODE ######
 
     # Do NOT change this code: Controls the simulation, and handles the case
