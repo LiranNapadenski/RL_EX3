@@ -10,22 +10,13 @@ env = gym.make('FrozenLake-v0')
 # Define the neural network mapping 16x1 one hot vector to a vector of 4 Q values
 # and training loss
 # TODO: define network, loss and optimiser(use learning rate of 0.1).
-LR = 0.1
+LR = 0.0081
 input_dim = 16
 output_dim = 4
-class myNet(nn.Module):
-    def __init__(self, input_dim, hidden_dim, output_dim):
-        super().__init__()
-        self.layer1 = nn.Linear(input_dim, hidden_dim)
-        self.activation = nn.ReLU()
-        self.layer2 = nn.Linear(hidden_dim, output_dim)
-    
-    def forward(self, x):
-        return self.layer2(self.activation(self.layer1(x)))
 
-frozenNet = myNet(input_dim, 256, output_dim)
+frozenNet = nn.Sequential(nn.Linear(input_dim, output_dim, bias=False))
 optimizer = torch.optim.Adam(lr=LR, params=frozenNet.parameters())
-loss_fn = nn.MSELoss()
+loss_fn = nn.MSELoss(reduction='sum')
 
 # Implement Q-Network learning algorithm
 
@@ -48,9 +39,8 @@ for i in range(num_episodes):
         # 1. Choose an action greedily from the Q-network
         #    (run the network for current state and choose the action with the maxQ)
         # TODO: Implement Step 1
-        optimizer.zero_grad()
-        one_hot = torch.zeros(input_dim)
-        one_hot[s] = 1
+        one_hot = torch.zeros(1, input_dim)
+        one_hot[0, s] = 1
         Q = frozenNet(one_hot)
         action = torch.argmax(Q).item()
         # 2. A chance of e to perform random action
@@ -63,18 +53,18 @@ for i in range(num_episodes):
         # 4. Obtain the Q'(mark as Q1) values by feeding the new state through our network
         # TODO: Implement Step 4
 
-        one_hot = torch.zeros(input_dim)
-        one_hot[s1] = 1
+        one_hot = torch.zeros(1, input_dim)
+        one_hot[0, s1] = 1
         Q1 = frozenNet(one_hot)
 
         # 5. Obtain maxQ' and set our target value for chosen action using the bellman equation.
         # TODO: Implement Step 5
-        Q_target = Q.clone()
-        Q_target[action] = r + y * max(Q1)
+        Q_target = Q.clone().detach()
+        Q_target[0, action] = r + y * torch.max(Q1).item()
 
         # 6. Train the network using target and predicted Q values (model.zero(), forward, backward, optim.step)
         # TODO: Implement Step 6
-
+        optimizer.zero_grad()
         loss = loss_fn(Q, Q_target)
         loss.backward()
         optimizer.step()

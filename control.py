@@ -156,6 +156,7 @@ counter_times={} #how many times did i see (s, a)
 # like there will be little learning after this, so end the simulation
 # here, and say the overall algorithm has converged.
 
+NOISE = 0.1
 consecutive_no_learning_trials = 0
 while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
 
@@ -169,7 +170,7 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
     # TODO:
     # raise NotImplementedError('Action choice not implemented')
     # action = 0 if np.random.uniform() < 0.5 else 1
-    if policy[state] == -1 or np.random.rand() < 0.05:
+    if policy[state] == -1 or np.random.rand() < NOISE:
         action = np.random.randint(NUM_ACTIONS)
     else:
         action = policy[state]
@@ -182,7 +183,7 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
 
     # Increment simulation time
     time = time + 1
-
+    NOISE = 1./((time/50) + 10)
     # Get the state number corresponding to new state vector
     new_state = cart_pole.get_state(state_tuple)
     # if display_started == 1:

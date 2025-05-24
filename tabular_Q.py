@@ -11,17 +11,16 @@ Q = np.zeros([env.observation_space.n,env.action_space.n])
 lr = .8
 y = .95
 num_episodes = 2000
-NOISE = lambda x : 1/x
 #create lists to contain total rewards and steps per episode
 #jList = []
 rList = []
+NOISE = lambda t : 0.01 * np.exp(-t / num_episodes)
 for i in range(num_episodes):
     #Reset environment and get first new observation
     s = env.reset()
     rAll = 0 # Total reward during current episode
     d = False
     j = 0
-    FOUND_GOAL = False
     #The Q-Table learning algorithm
     while j < 99:
         j+=1
@@ -31,21 +30,15 @@ for i in range(num_episodes):
         # 3. Update Q-Table with new knowledge
         # 4. Update total reward
         # 5. Update episode if we reached the Goal State
-        action = 0
-        if np.random.rand() < NOISE(j) or not FOUND_GOAL:
-            action = env.action_space.sample()
-        else:
-            action = np.argmax(Q[s,:])
+        action = np.argmax(Q[s] + np.random.normal(0, NOISE(i), size=Q.shape[1]))
         
         ns, reward, terminated, _ = env.step(action)
-        Q[s, action] = Q[s, action] + lr * (reward + y * Q[ns,:].max() - Q[s, action])
+        Q[s, action] = Q[s, action] + lr * (reward + y * Q[ns].max() - Q[s, action])
         
-        s = ns
         rAll += reward
-        if reward != 0 :
-            FOUND_GOAL = True
-        if terminated:
+        if terminated :
             break
+        s = ns
     
     rList.append(rAll)
 
