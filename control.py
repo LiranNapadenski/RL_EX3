@@ -267,7 +267,6 @@ while consecutive_no_learning_trials < NO_LEARNING_THRESHOLD:
             consecutive_no_learning_trials += 1
         else:
             consecutive_no_learning_trials = 0
-        print(f"the time is {time}\n with optimal policy {policy}\n value func {value}")
         ###### END YOUR CODE ######
 
     # Do NOT change this code: Controls the simulation, and handles the case
@@ -303,4 +302,5 @@ x = np.arange(window//2, len(log_tstf) - window//2)
 plt.plot(x, weights[window:len(log_tstf)], 'r--')
 plt.xlabel('Num failures')
 plt.ylabel('Num steps to failure')
+plt.title("with noise")
 plt.show()
